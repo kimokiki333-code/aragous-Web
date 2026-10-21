@@ -167,10 +167,13 @@ def execute_module_safe(
     used_fallback = False
 
     if IS_SERVERLESS:
-        # In serverless environments (Vercel / AWS Lambda), run fast in-process telemetry + HTTPS probe
-        enriched = synthesize_module_telemetry(mod_meta, cleaned_target, threads, module_opts or {}, "")
-        elapsed = round(max(0.18, time.time() - start), 2)
-        return enriched, elapsed, False
+        # Serverless deployments must not substitute fabricated telemetry for live module execution.
+        elapsed = round(time.time() - start, 2)
+        message = (
+            f"[UNAVAILABLE] Live module execution is disabled in this serverless environment for {script_name}.\n"
+            "[Evidence status] No target findings were collected; no synthetic telemetry was generated."
+        )
+        return message, elapsed, True
 
     if os.path.isfile(script_path):
         mod_name = os.path.splitext(script_name)[0]
@@ -225,9 +228,14 @@ def execute_module_safe(
         if ln.strip() and not ln.strip().startswith("=")
     ]
     if used_fallback or len(meaningful_lines) < 4 or any(m in lower_out for m in failure_markers):
-        enriched = synthesize_module_telemetry(mod_meta, cleaned_target, threads, module_opts or {}, raw_out)
         elapsed = round(time.time() - start, 2)
-        return enriched, elapsed, True
+        diagnostic = raw_out.strip() or "The module returned no usable output."
+        message = (
+            f"[UNAVAILABLE] Live evidence was not collected by {script_name}.\n"
+            "[Evidence status] Findings are not inferred from missing output or network errors.\n"
+            f"[Diagnostic] {diagnostic[:1200]}"
+        )
+        return message, elapsed, True
 
     elapsed = round(time.time() - start, 2)
     return raw_out, elapsed, False
@@ -505,16 +513,21 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
             for smid in sub_ids:
                 stool = tools_mapping.get(str(smid))
                 if stool and stool.get("script"):
-                    out, dur, _ = execute_module_safe(stool["script"], stool, target, threads, req.options)
-                    sev = parse_output_severity(out)
+                    out, dur, unavailable = execute_module_safe(stool["script"], stool, target, threads, req.options)
+                    sev = "UNAVAILABLE" if unavailable else parse_output_severity(out)
                     outputs[stool["name"]] = out
                     severities[stool["name"]] = sev
-                    runtimes.append({"id": smid, "module": stool["name"], "section": stool["section"], "severity": sev, "duration_s": dur})
-                    all_findings.extend(extract_findings_from_output(stool["name"], out, sev))
+                    runtimes.append({
+                        "id": smid, "module": stool["name"], "section": stool["section"],
+                        "severity": sev, "status": "unavailable" if unavailable else "completed",
+                        "duration_s": dur,
+                    })
+                    if not unavailable:
+                        all_findings.extend(extract_findings_from_output(stool["name"], out, sev))
             continue
 
-        out, dur, _ = execute_module_safe(tool["script"], tool, target, threads, req.options)
-        sev = parse_output_severity(out)
+        out, dur, unavailable = execute_module_safe(tool["script"], tool, target, threads, req.options)
+        sev = "UNAVAILABLE" if unavailable else parse_output_severity(out)
         outputs[tool["name"]] = out
         severities[tool["name"]] = sev
         runtimes.append({
@@ -522,9 +535,11 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
             "module": tool["name"],
             "section": tool["section"],
             "severity": sev,
+            "status": "unavailable" if unavailable else "completed",
             "duration_s": dur,
         })
-        all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
+        if not unavailable:
+            all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
 
     total_duration = round(time.time() - start_ts, 2)
 
@@ -534,8 +549,16 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
     except Exception:
         pass
 
+    unavailable_count = sum(1 for item in runtimes if item.get("status") == "unavailable")
+    scan_status = (
+        "unavailable" if runtimes and unavailable_count == len(runtimes)
+        else "partial" if unavailable_count
+        else "completed"
+    )
     scan_record: Dict[str, Any] = {
         "scan_id": scan_id,
+        "status": scan_status,
+        "evidence_policy": "no-synthetic-telemetry-v1",
         "target": target,
         "mode": mode,
         "profile": req.profile,
@@ -560,52 +583,7 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
     return scan_record
 
 
-# --- Seed an initial scan in-memory so cold starts on Vercel & local are instant (<5ms) ---
-def seed_initial_telemetry():
-    if SCAN_HISTORY:
-        return
-    try:
-        target = "github.com"
-        seed_ids = ["3", "12", "115"]
-        outputs: Dict[str, str] = {}
-        severities: Dict[str, str] = {}
-        runtimes: List[Dict[str, Any]] = []
-        all_findings: List[Dict[str, str]] = []
-        for mid in seed_ids:
-            tool = tools_mapping.get(mid)
-            if not tool:
-                continue
-            out = synthesize_module_telemetry(tool, target, 2, {}, "")
-            sev = parse_output_severity(out)
-            outputs[tool["name"]] = out
-            severities[tool["name"]] = sev
-            runtimes.append({"id": mid, "module": tool["name"], "section": tool["section"], "severity": sev, "duration_s": 0.28})
-            all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
-        scan_record: Dict[str, Any] = {
-            "scan_id": "scan-init001",
-            "target": target,
-            "mode": "multi",
-            "profile": "speed",
-            "threads": 2,
-            "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "duration_s": 0.84,
-            "module_count": len(outputs),
-            "outputs": outputs,
-            "severities": severities,
-            "runtimes": runtimes,
-            "findings": all_findings,
-            "ai_analysis": None,
-        }
-        scan_record["ai_analysis"] = ai_engine.analyze_scan_report(scan_record)
-        SCAN_HISTORY.insert(0, scan_record)
-    except Exception as exc:
-        print(f"Initial seed scan warning: {exc}")
-
-
-seed_initial_telemetry()
-
-
-# --- API Routes ---
+# Do not seed scan history with fabricated telemetry. Empty history means no scan has run.\n\n# --- API Routes ---
 
 @app.get("/api/health")
 def api_health():
