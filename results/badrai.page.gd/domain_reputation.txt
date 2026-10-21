@@ -1,0 +1,12 @@
+ Reputation for badrai.page.gd  
++------------------------------+
+| Engine      | Result         |
+|-------------+----------------|
+| IP          | 185.27.134.114 |
+| Verdict     | Low risk       |
+| VirusTotal  | -              |
+| Cisco Talos | -              |
+| RBL Hits    | 0              |
+| URLHaus     | 0              |
+| OTX Pulses  | -              |
++------------------------------+

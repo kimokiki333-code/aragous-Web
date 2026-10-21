@@ -1,0 +1,25 @@
+=== JavaScript Obfuscation Detector ===
+============================================
+   Argus – JavaScript Obfuscation Detector
+============================================
+
+
+* Crawled 1 pages (include_subs=False)
+
+* Discovered 0 scripts (limit=75)
+
+
+    JS Obfuscation – badrai.page.gd    
++-------------------------------------+
+| Script | Bytes | Score | Assessment |
+|--------+-------+-------+------------|
++-------------------------------------+
+* Obfuscation detection completed
+
+    JS Obfuscation – badrai.page.gd    
++-------------------------------------+
+| Script | Bytes | Score | Assessment |
+|--------+-------+-------+------------|
++-------------------------------------+
+
+

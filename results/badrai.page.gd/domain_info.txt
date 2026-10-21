@@ -1,0 +1,34 @@
+                              WHOIS & DNS Records                              
++-----------------------------------------------------------------------------+
+| Key     | Value                                                             |
+|---------+-------------------------------------------------------------------|
+| Handle  | -                                                                 |
+| Name    | -                                                                 |
+| Type    | -                                                                 |
+| Country | -                                                                 |
+| Start   | -                                                                 |
+| End     | -                                                                 |
+| A       | 185.27.134.114                                                    |
+| AAAA    | -                                                                 |
+| MX      | -                                                                 |
+| NS      | -                                                                 |
+| TXT     | -                                                                 |
+| CAA     | 0 issue "microsoft.com,0 issue "globalsign.com,0 issue            |
+|         | "buypass.com,0 issue "harica.gr,0 issue "identrust.com,0 issue    |
+|         | "certum.pl,0 issue "amazon.com,0 issue "digicert.com,0 issue      |
+|         | "trust-provider.com,0 issue "pki.goog,0 issue "sectigo.com,0      |
+|         | issue "entrust.net,0 issue "comodoca.com,0 issue "ssl.com,0 issue |
+|         | "amazontrust.com,0 issue "starfieldtech.com,0 issue               |
+|         | "swisssign.com,0 issue "godaddy.com,0 issue "usertrust.com,0      |
+|         | issue "letsencrypt.org                                            |
+| SOA     | -                                                                 |
++-----------------------------------------------------------------------------+
+                   IP Geolocation                   
++--------------------------------------------------+
+|       IP       | Country | Org | ASN | Lat | Lon |
+|----------------+---------+-----+-----+-----+-----|
+| 185.27.134.114 |    -    |  -  |  -  |  -  |  -  |
++--------------------------------------------------+
++---------------------------------- Summary ----------------------------------+
+| A records: 1  AAAA: 0  IPs geo: 1  Entities: 0  Events: 0  Elapsed: 2.94s   |
++-----------------------------------------------------------------------------+

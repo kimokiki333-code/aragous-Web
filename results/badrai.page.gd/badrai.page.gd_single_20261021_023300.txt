@@ -1,0 +1,25 @@
+=== SPF Network Extractor ===
+============================================================
+   ARAGOS v3.0 — SPF Network Extractor [Module #31]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.107.175.82)
+[*] Category       : Network & Infrastructure
+[*] Engine Threads : 2 | Script: spf_network_extractor.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Record / Check   ┃ Telemetry Value                                          ┃ Status   ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ A (IPv4)         │ 104.107.175.82 (TTL: 300s)                                    │ OK       │
+│ AAAA (IPv6)      │ 2606:4700:3030::5bae:50e8 (TTL: 300s)                 │ OK       │
+│ NS (Authoritative)│ ns1.badrai.page.gd, ns2.badrai.page.gd                              │ OK       │
+│ MX (Mail Exch.)  │ 10 aspmx.l.google.com, 20 alt1.aspmx.l.google.com        │ OK       │
+│ TXT / SPF        │ v=spf1 include:_spf.badrai.page.gd ~all                        │ WARN     │
+│ DMARC Policy     │ v=DMARC1; p=quarantine; rua=mailto:dmarc@badrai.page.gd        │ OK       │
+│ CAA Restriction  │ 0 issue "letsencrypt.org"; 0 issue "digicert.com"        │ OK       │
+│ Subdomains Found │ api.badrai.page.gd, auth.badrai.page.gd, cdn.badrai.page.gd, dev.badrai.page.gd  │ INFO     │
+└──────────────────┴──────────────────────────────────────────────────────────┴──────────┘
+[!] Advisory (WARN): SPF uses softfail (~all) instead of strict reject (-all).
+[+] DNS & Zone reconnaissance completed successfully.
+
+

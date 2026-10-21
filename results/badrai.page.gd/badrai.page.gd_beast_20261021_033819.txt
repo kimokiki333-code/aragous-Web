@@ -1,0 +1,384 @@
+=== Associated Hosts ===
+============================================================
+   ARAGOS v3.0 — Associated Hosts [Module #1]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.102.33.230)
+[*] Category       : Network & Infrastructure
+[*] Engine Threads : 2 | Script: associated_hosts.py
+[*] ASN / Geo Edge : AS16509 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ Associated Hosts verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] Associated Hosts analysis completed successfully.
+
+
+=== DNS Over HTTPS ===
+============================================================
+   ARAGOS v3.0 — DNS Over HTTPS [Module #2]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.135.226.217)
+[*] Category       : Network & Infrastructure
+[*] Engine Threads : 2 | Script: dns_over_https.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Record / Check   ┃ Telemetry Value                                          ┃ Status   ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ A (IPv4)         │ 104.135.226.217 (TTL: 300s)                                    │ OK       │
+│ AAAA (IPv6)      │ 2606:4700:3030::77e1:d71e (TTL: 300s)                 │ OK       │
+│ NS (Authoritative)│ ns1.badrai.page.gd, ns2.badrai.page.gd                              │ OK       │
+│ MX (Mail Exch.)  │ 10 aspmx.l.google.com, 20 alt1.aspmx.l.google.com        │ OK       │
+│ TXT / SPF        │ v=spf1 include:_spf.badrai.page.gd ~all                        │ WARN     │
+│ DMARC Policy     │ v=DMARC1; p=quarantine; rua=mailto:dmarc@badrai.page.gd        │ OK       │
+│ CAA Restriction  │ 0 issue "letsencrypt.org"; 0 issue "digicert.com"        │ OK       │
+│ Subdomains Found │ api.badrai.page.gd, auth.badrai.page.gd, cdn.badrai.page.gd, dev.badrai.page.gd  │ INFO     │
+└──────────────────┴──────────────────────────────────────────────────────────┴──────────┘
+[!] Advisory (WARN): SPF uses softfail (~all) instead of strict reject (-all).
+[+] DNS & Zone reconnaissance completed successfully.
+
+
+=== DNS Records ===
+============================================
+         Argus - DNS Records Check
+============================================
+
+
+      DNS Records –       
+      badrai.page.gd      
++------------------------+
+| Type  | Value(s)       |
+|-------+----------------|
+| AAAA  | -              |
+| A     | 185.27.134.114 |
+| MX    | -              |
+| NS    | -              |
+| TXT   | -              |
+| CNAME | -              |
+| SOA   | -              |
++------------------------+
++---------------------------------- Summary ----------------------------------+
+| Types queried: 7  Total records: 1  Elapsed: 0.97s                          |
++-----------------------------------------------------------------------------+
+[*] DNS records check completed
+
+      DNS Records –       
+      badrai.page.gd      
++------------------------+
+| Type  | Value(s)       |
+|-------+----------------|
+| AAAA  | -              |
+| A     | 185.27.134.114 |
+| MX    | -              |
+| NS    | -              |
+| TXT   | -              |
+| CNAME | -              |
+| SOA   | -              |
++------------------------+
++---------------------------------- Summary ----------------------------------+
+| Types queried: 7  Total records: 1  Elapsed: 0.97s                          |
++-----------------------------------------------------------------------------+
+
+
+=== DNSSEC Check ===
+============================================
+   Argus – DNSSEC Checker
+============================================
+
+
+C:\ARAGOS-FULL-SERVER (1)\dnssec.py:121: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.datetime.utcnow()
+                         DNSSEC Check – badrai.page.gd                         
++------------------------------------------------------------------------------
+| Zone                 |  DNSKEY   |    DS     |  RRSIG   |       Status       
+|----------------------+-----------+-----------+----------+--------------------
+| badrai.page.gd       |     0     |     0     |    0     |     Not signed     
++------------------------------------------------------------------------------
++-------------------------------- Delegation ---------------------------------+
+| Parent DS: missing   Parent: page.gd                                        |
++-----------------------------------------------------------------------------+
+                        Denial of Existence (NSEC/NSEC3)                       
++------------------------------------------------------------------------------
+| Zone          | DNSKEY |   DS   | RRSIG |    Status    | Zone | NSEC | NSEC3 
+|---------------+--------+--------+-------+--------------+------+------+-------
+| badrai.page.… |   No   |   No   |       |              |      |      |       
++------------------------------------------------------------------------------
++---------------------------------- Summary ----------------------------------+
+| Not signed: 1   Parent DS: missing   Elapsed: 0.93s                         |
++-----------------------------------------------------------------------------+
+[*] DNSSEC check completed
+
+                         DNSSEC Check – badrai.page.gd                          
++------------------------------------------------------------------------------+
+| Zone                 |  DNSKEY   |    DS     |  RRSIG   |       Status       |
+|----------------------+-----------+-----------+----------+--------------------|
+| badrai.page.gd       |     0     |     0     |    0     |     Not signed     |
++------------------------------------------------------------------------------+
++--------------------------------- Delegation ---------------------------------+
+| Parent DS: missing   Parent: page.gd                                         |
++------------------------------------------------------------------------------+
+                        Denial of Existence (NSEC/NSEC3)                        
++------------------------------------------------------------------------------+
+| Zone          | DNSKEY |   DS   | RRSIG |    Status    | Zone | NSEC | NSEC3 |
+|---------------+--------+--------+-------+--------------+------+------+-------|
+| badrai.page.… |   No   |   No   |       |              |      |      |       |
++------------------------------------------------------------------------------+
++---------------------------------- Summary -----------------------------------+
+| Not signed: 1   Parent DS: missing   Elapsed: 0.93s                          |
++------------------------------------------------------------------------------+
+
+
+=== Archive History ===
+============================================================
+   ARAGOS v3.0 — Archive History [Module #53]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.25.97.226)
+[*] Category       : Web Application Analysis
+[*] Engine Threads : 2 | Script: archive_history.py
+[*] ASN / Geo Edge : AS16509 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ Archive History verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] Archive History analysis completed successfully.
+
+
+=== Broken Links Detection ===
+============================================================
+   ARAGOS v3.0 — Broken Links Detection [Module #54]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.65.86.30)
+[*] Category       : Web Application Analysis
+[*] Engine Threads : 2 | Script: broken_links.py
+[*] ASN / Geo Edge : AS16509 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ Broken Links Detection verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] Broken Links Detection analysis completed successfully.
+
+
+=== Carbon Footprint ===
+============================================================
+   ARAGOS v3.0 — Carbon Footprint [Module #55]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.134.231.45)
+[*] Category       : Web Application Analysis
+[*] Engine Threads : 2 | Script: carbon_footprint.py
+[*] ASN / Geo Edge : AS16509 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ Carbon Footprint verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] Carbon Footprint analysis completed successfully.
+
+
+=== CMS Detection ===
+============================================================
+   ARAGOS v3.0 — CMS Detection [Module #56]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.82.80.34)
+[*] Category       : Web Application Analysis
+[*] Engine Threads : 2 | Script: cms_detection.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ CMS Detection verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] CMS Detection analysis completed successfully.
+
+
+=== Censys Reconnaissance ===
+============================================================
+   ARAGOS v3.0 — Censys Reconnaissance [Module #102]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.62.49.4)
+[*] Category       : Security & Threat Intelligence
+[*] Engine Threads : 2 | Script: censys.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ Censys Reconnaissance verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] Censys Reconnaissance analysis completed successfully.
+
+
+=== Certificate Authority Recon ===
+============================================================
+   ARAGOS v3.0 — Certificate Authority Recon [Module #103]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.135.243.127)
+[*] Category       : Security & Threat Intelligence
+[*] Engine Threads : 2 | Script: certificate_authority_recon.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Cryptographic Metric   ┃ Negotiated Telemetry                               ┃ Status   ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Subject Common Name    │ *.badrai.page.gd / badrai.page.gd                              │ VALID    │
+│ Issuer Authority       │ DigiCert Global G2 TLS RSA SHA256 2020 CA1         │ OK       │
+│ Protocol Support       │ TLSv1.3 (Preferred), TLSv1.2 (Enabled)             │ SECURE   │
+│ Legacy Protocols       │ SSLv3: Disabled, TLSv1.0: Disabled, TLSv1.1: Off   │ OK       │
+│ Primary Cipher Suite   │ TLS_AES_256_GCM_SHA384 (ECDHE X25519 / 256-bit)    │ OK       │
+│ Secondary Cipher Suite │ TLS_CHACHA20_POLY1305_SHA256 (Forward Secrecy)     │ OK       │
+│ Certificate Validity   │ 248 days remaining (Auto-Renew CT Logged)          │ OK       │
+│ OCSP Stapling & SCT    │ Stapled Response Valid | 3 Embedded SCTs           │ OK       │
+└────────────────────────┴────────────────────────────────────────────────────┴──────────┘
+[+] Cryptographic handshake & certificate chain verified.
+
+
+=== Data Leak Detection ===
+
+    =============================================
+           Argus - Advanced Data Leak Checker
+    =============================================
+    
+usage: Argus – Advanced Data Leak Checker [-h] [--email EMAIL]
+                                          [--threads THREADS]
+                                          domain
+Argus – Advanced Data Leak Checker: error: unrecognized arguments: 2
+
+
+=== Exposed Environment Files Checker ===
+
+
+=============================================
+    Argus - Exposed Environment Files Checker
+=============================================
+
+
+[*] Checking for publicly exposed environment files on badrai.page.gd...
+[!] Error checking .env: Invalid URL 'badrai.page.gd/.env': No scheme supplied.
+Perhaps you meant https://badrai.page.gd/.env?
+[!] Error checking env: Invalid URL 'badrai.page.gd/env': No scheme supplied. 
+Perhaps you meant https://badrai.page.gd/env?
+[!] Error checking environment: Invalid URL 'badrai.page.gd/environment': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/environment?
+[!] Error checking .env.php: Invalid URL 'badrai.page.gd/.env.php': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/.env.php?
+[!] Error checking config.php: Invalid URL 'badrai.page.gd/config.php': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/config.php?
+[!] Error checking config.yaml: Invalid URL 'badrai.page.gd/config.yaml': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/config.yaml?
+[!] Error checking config.yml: Invalid URL 'badrai.page.gd/config.yml': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/config.yml?
+[!] Error checking config.json: Invalid URL 'badrai.page.gd/config.json': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/config.json?
+[!] Error checking config.ini: Invalid URL 'badrai.page.gd/config.ini': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/config.ini?
+[!] Error checking localsettings.php: Invalid URL 
+'badrai.page.gd/localsettings.php': No scheme supplied. Perhaps you meant 
+https://badrai.page.gd/localsettings.php?
+[!] Error checking settings.php: Invalid URL 'badrai.page.gd/settings.php': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/settings.php?
+[!] Error checking db.php: Invalid URL 'badrai.page.gd/db.php': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/db.php?
+[!] Error checking database.php: Invalid URL 'badrai.page.gd/database.php': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/database.php?
+[!] Error checking wp-config.php: Invalid URL 'badrai.page.gd/wp-config.php': 
+No scheme supplied. Perhaps you meant https://badrai.page.gd/wp-config.php?
+[!] Error checking appsettings.json: Invalid URL 
+'badrai.page.gd/appsettings.json': No scheme supplied. Perhaps you meant 
+https://badrai.page.gd/appsettings.json?
+[!] Error checking web.config: Invalid URL 'badrai.page.gd/web.config': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/web.config?
+[!] Error checking .git/config: Invalid URL 'badrai.page.gd/.git/config': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/.git/config?
+[!] Error checking .svn/entries: Invalid URL 'badrai.page.gd/.svn/entries': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/.svn/entries?
+[!] Error checking .hg/.hgignore: Invalid URL 'badrai.page.gd/.hg/.hgignore': 
+No scheme supplied. Perhaps you meant https://badrai.page.gd/.hg/.hgignore?
+[!] Error checking .gitignore: Invalid URL 'badrai.page.gd/.gitignore': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/.gitignore?
+[!] Error checking composer.lock: Invalid URL 'badrai.page.gd/composer.lock': 
+No scheme supplied. Perhaps you meant https://badrai.page.gd/composer.lock?
+[!] Error checking package-lock.json: Invalid URL 
+'badrai.page.gd/package-lock.json': No scheme supplied. Perhaps you meant 
+https://badrai.page.gd/package-lock.json?
+[!] Error checking yarn.lock: Invalid URL 'badrai.page.gd/yarn.lock': No scheme
+supplied. Perhaps you meant https://badrai.page.gd/yarn.lock?
+[!] Error checking Dockerfile: Invalid URL 'badrai.page.gd/Dockerfile': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/Dockerfile?
+[!] Error checking docker-compose.yml: Invalid URL 
+'badrai.page.gd/docker-compose.yml': No scheme supplied. Perhaps you meant 
+https://badrai.page.gd/docker-compose.yml?
+[!] Error checking Makefile: Invalid URL 'badrai.page.gd/Makefile': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/Makefile?
+[!] Error checking requirements.txt: Invalid URL 
+'badrai.page.gd/requirements.txt': No scheme supplied. Perhaps you meant 
+https://badrai.page.gd/requirements.txt?
+[!] Error checking Gemfile: Invalid URL 'badrai.page.gd/Gemfile': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/Gemfile?
+[!] Error checking Pipfile: Invalid URL 'badrai.page.gd/Pipfile': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/Pipfile?
+[!] Error checking Pipfile.lock: Invalid URL 'badrai.page.gd/Pipfile.lock': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/Pipfile.lock?
+[!] Error checking setup.py: Invalid URL 'badrai.page.gd/setup.py': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/setup.py?
+[!] Error checking phpinfo.php: Invalid URL 'badrai.page.gd/phpinfo.php': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/phpinfo.php?
+[!] Error checking php.ini: Invalid URL 'badrai.page.gd/php.ini': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/php.ini?
+[!] Error checking backup.sql: Invalid URL 'badrai.page.gd/backup.sql': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/backup.sql?
+[!] Error checking dump.sql: Invalid URL 'badrai.page.gd/dump.sql': No scheme 
+supplied. Perhaps you meant https://badrai.page.gd/dump.sql?
+[!] Error checking database.sql: Invalid URL 'badrai.page.gd/database.sql': No 
+scheme supplied. Perhaps you meant https://badrai.page.gd/database.sql?
+[+] No publicly exposed environment files found.
+
+

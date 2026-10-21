@@ -1,0 +1,24 @@
+=== WHOIS Lookup ===
+============================================================
+   ARAGOS v3.0 — WHOIS Lookup [Module #18]
+============================================================
+[*] Target Scope   : badrai.page.gd (104.20.17.157)
+[*] Category       : Network & Infrastructure
+[*] Engine Threads : 2 | Script: whois_lookup.py
+[*] ASN / Geo Edge : AS13335 Cloud Edge Network — Frankfurt, DE (Anycast Edge)
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
+┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
+│ Endpoint Status            │ https://badrai.page.gd (HTTP 200)             │ OK       │
+│ Edge / Server Stack        │ openresty                              │ INFO     │
+│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload                                │ OK       │
+│ Content-Security-Policy    │ Missing / Permissive (WARN)                              │ WARN     │
+│ X-Frame-Options            │ SAMEORIGIN                                 │ OK       │
+│ X-Content-Type-Options     │ nosniff                                │ OK       │
+│ Module Heuristic Check     │ WHOIS Lookup verified                           │ OK       │
+└────────────────────────────┴────────────────────────────────────────────────┴──────────┘
+[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on badrai.page.gd.
+[+] WHOIS Lookup analysis completed successfully.
+
+
