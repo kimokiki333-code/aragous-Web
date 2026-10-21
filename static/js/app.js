@@ -67,130 +67,6 @@
     return Math.abs(h >>> 0).toString(16).padStart(8, "0");
   }
 
-  function synthesizeModuleClient(mod, domain, threads) {
-    const h = hashString(domain + ":" + mod.id + ":" + mod.name);
-    const knownIps = {
-      "github.com": ["140.82.121.4", "AS36459 GitHub, Inc.", "San Francisco, US"],
-      "example.com": ["93.184.215.14", "AS15133 Edgecast / Digicert", "Los Angeles, US"],
-      "cloudflare.com": ["104.16.132.229", "AS13335 Cloudflare, Inc.", "San Francisco, US"]
-    };
-    const info = knownIps[domain] || [
-      `104.${(parseInt(h.slice(0, 2), 16) % 120) + 16}.${(parseInt(h.slice(2, 4), 16) % 240) + 10}.${(parseInt(h.slice(4, 6), 16) % 240) + 2}`,
-      "AS13335 Cloudflare Anycast Edge",
-      "Frankfurt, DE (Anycast Edge)"
-    ];
-    const ip = info[0];
-    const asn = info[1];
-    const geo = info[2];
-
-    const nLow = mod.name.toLowerCase();
-    let severity = "OK";
-    const lines = [
-      "============================================================",
-      `   ARAGOS v3.0 — ${mod.name} [Module #${mod.id}]`,
-      "============================================================",
-      `[*] Target Scope   : ${domain} (${ip})`,
-      `[*] Category       : ${mod.section}`,
-      `[*] Engine Threads : ${threads} | Script: ${mod.script || "suite"}`,
-      `[*] ASN / Geo Edge : ${asn} — ${geo}`,
-      ""
-    ];
-
-    if (nLow.includes("dns") || nLow.includes("zone") || nLow.includes("subdomain") || nLow.includes("spf") || nLow.includes("dmarc")) {
-      severity = "WARN";
-      lines.push(
-        "┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-        "┃ Record / Check   ┃ Telemetry Value                                          ┃ Status   ┃",
-        "┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-        `│ A (IPv4)         │ ${ip} (TTL: 300s)                                    │ OK       │`,
-        `│ AAAA (IPv6)      │ 2606:4700:3030::${h.slice(0, 4)}:${h.slice(4, 8)} (TTL: 300s)                 │ OK       │`,
-        `│ NS (Authoritative)│ ns1.${domain}, ns2.${domain}                              │ OK       │`,
-        `│ MX (Mail Exch.)  │ 10 aspmx.l.google.com, 20 alt1.aspmx.l.google.com        │ OK       │`,
-        `│ TXT / SPF        │ v=spf1 include:_spf.${domain} ~all                        │ WARN     │`,
-        `│ DMARC Policy     │ v=DMARC1; p=quarantine; rua=mailto:dmarc@${domain}        │ OK       │`,
-        `│ Subdomains Found │ api.${domain}, auth.${domain}, cdn.${domain}, dev.${domain}  │ INFO     │`,
-        "└──────────────────┴──────────────────────────────────────────────────────────┴──────────┘",
-        "[!] Advisory (WARN): SPF uses softfail (~all) instead of strict reject (-all).",
-        "[+] DNS & Zone reconnaissance completed successfully."
-      );
-    } else if (nLow.includes("ssl") || nLow.includes("tls") || nLow.includes("cert") || nLow.includes("cipher")) {
-      severity = "OK";
-      lines.push(
-        "┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-        "┃ Cryptographic Metric   ┃ Negotiated Telemetry                               ┃ Status   ┃",
-        "┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-        `│ Subject Common Name    │ *.${domain} / ${domain}                              │ VALID    │`,
-        "│ Issuer Authority       │ DigiCert Global G2 TLS RSA SHA256 2020 CA1         │ OK       │",
-        "│ Protocol Support       │ TLSv1.3 (Preferred), TLSv1.2 (Enabled)             │ SECURE   │",
-        "│ Legacy Protocols       │ SSLv3: Disabled, TLSv1.0: Disabled, TLSv1.1: Off   │ OK       │",
-        "│ Primary Cipher Suite   │ TLS_AES_256_GCM_SHA384 (ECDHE X25519 / 256-bit)    │ OK       │",
-        "│ Certificate Validity   │ 248 days remaining (Auto-Renew CT Logged)          │ OK       │",
-        "└────────────────────────┴────────────────────────────────────────────────────┴──────────┘",
-        "[+] Cryptographic handshake & certificate chain verified."
-      );
-    } else {
-      severity = "WARN";
-      lines.push(
-        "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-        "┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃",
-        "┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-        `│ Endpoint Status            │ https://${domain} (HTTP 200 OK)                 │ OK       │`,
-        "│ Strict-Transport-Security  │ max-age=31536000; includeSubDomains; preload   │ OK       │",
-        "│ Content-Security-Policy    │ default-src 'self'; script-src 'unsafe-inline' │ WARN     │",
-        "│ X-Frame-Options            │ DENY                                           │ OK       │",
-        "│ X-Content-Type-Options     │ nosniff                                        │ OK       │",
-        "│ Permissions-Policy         │ Not Set (Missing Header)                       │ WARN     │",
-        `│ Module Heuristic Check     │ ${mod.name.slice(0, 42)} verified              │ OK       │`,
-        "└────────────────────────────┴────────────────────────────────────────────────┴──────────┘",
-        `[!] Security Finding (WARN): Permissions-Policy header not enforced on ${domain}.`,
-        `[+] ${mod.name} analysis completed successfully.`
-      );
-    }
-
-    return { output: lines.join("\n"), severity, duration_s: +(0.22 + (parseInt(h.slice(0, 2), 16) % 45) / 100).toFixed(2) };
-  }
-
-  function buildClientAnalysis(target, outputs, severities) {
-    const warnCount = Object.values(severities).filter((s) => s === "WARN").length;
-    const alertCount = Object.values(severities).filter((s) => s === "ALERT").length;
-    const score = Math.min(92, Math.max(18, 18 + alertCount * 24 + warnCount * 9));
-    const level = score >= 75 ? "HIGH" : score >= 36 ? "MODERATE" : "LOW";
-    const modList = Object.keys(outputs).join(", ");
-    const md = `### 🛡️ ARAGOS Neural Threat Assessment — \`${target}\`
-**Active Model Profile:** \`${state.activeModel}\`
-
-#### 1. Executive Reconnaissance Summary
-Completed multi-vector telemetry synthesis for **\`${target}\`** across **${Object.keys(outputs).length} module(s)** (${modList}).
-
-- **[OK] Transport & Cryptographic Layer**: TLSv1.3 AEAD cipher suites (\`TLS_AES_256_GCM_SHA384\`) and HSTS preload policy verified.
-- **[WARN] Web Security Header Posture**: \`Permissions-Policy\` is not explicitly restricted and \`Content-Security-Policy\` should be audited for inline script directives.
-- **[WARN] DNS & Mail Anti-Spoofing**: SPF record uses softfail (\`~all\`); transition to strict \`-all\` with enforced DMARC (\`p=reject\`).
-
-#### 2. Prioritized Remediation Playbook
-\`\`\`nginx
-# Recommended Edge Security Hardening for ${target}
-add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-Frame-Options "DENY" always;
-add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
-\`\`\``;
-
-    return {
-      target,
-      risk_score: score,
-      risk_level: level,
-      analysis_markdown: md,
-      model: state.activeModel,
-      provider: "Aragos Neural Core (0 MB RAM/Disk)",
-      latency_ms: 18,
-      recommended_modules: [
-        { id: "116", name: "HTTP Security Features", reason: "Verify HSTS, CSP & Permissions-Policy headers" },
-        { id: "14", name: "TLS Cipher Suites", reason: "Audit TLS 1.2/1.3 cipher negotiation" },
-        { id: "63", name: "CORS Misconfiguration Scanner", reason: "Test cross-origin credential reflection" }
-      ]
-    };
-  }
-
   function runClientScanJob(payload) {
     const target = cleanTarget(payload.target);
     const mode = (payload.mode || "single").toLowerCase();
@@ -212,45 +88,42 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     const outputs = {};
     const severities = {};
     const runtimes = [];
-    const findings = [];
-    let totalDur = 0;
-
+    const startedAt = new Date().toISOString();
     ids.forEach((id) => {
-      const mod = state.modules.find((m) => m.id === String(id)) || state.modules[0];
-      const res = synthesizeModuleClient(mod, target, payload.threads || 2);
-      outputs[mod.name] = res.output;
-      severities[mod.name] = res.severity;
-      totalDur += res.duration_s;
+      const mod = state.modules.find((m) => m.id === String(id));
+      if (!mod) return;
+      outputs[mod.name] = [
+        "[UNAVAILABLE] ARAGOS cannot execute Python scan modules from this static browser fallback.",
+        "[Evidence status] No live request was made and no target findings were collected.",
+        "[Next step] Start the ARAGOS backend and confirm /api/health is reachable."
+      ].join("\n");
+      severities[mod.name] = "UNAVAILABLE";
       runtimes.push({
         id: mod.id,
         module: mod.name,
         section: mod.section,
-        severity: res.severity,
-        duration_s: res.duration_s
-      });
-      findings.push({
-        module: mod.name,
-        severity: res.severity,
-        detail: res.severity === "WARN"
-          ? `Advisory detected on ${target} during ${mod.name} inspection (review security headers / SPF policy).`
-          : `${mod.name} verified ${target} telemetry with status OK.`
+        severity: "UNAVAILABLE",
+        status: "unavailable",
+        duration_s: 0
       });
     });
 
     const scanRecord = {
       scan_id: "scan-" + hashString(target + Date.now()).slice(0, 8),
+      status: "unavailable",
+      evidence_policy: "no-synthetic-telemetry-v1",
       target,
       mode,
       profile: payload.profile || "speed",
       threads: payload.threads || 2,
-      started_at: new Date().toISOString(),
-      duration_s: +totalDur.toFixed(2),
+      started_at: startedAt,
+      duration_s: 0,
       module_count: Object.keys(outputs).length,
       outputs,
       severities,
       runtimes,
-      findings,
-      ai_analysis: buildClientAnalysis(target, outputs, severities)
+      findings: [],
+      ai_analysis: null
     };
 
     state.scans.unshift(scanRecord);
@@ -536,7 +409,13 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
 
       renderActiveScan(scanRecord);
       renderScanVault();
-      showToast(`Scan completed: ${scanRecord.module_count} module(s) on ${scanRecord.target} in ${scanRecord.duration_s}s`, "success");
+      if (scanRecord.status === "unavailable") {
+        showToast("Scan unavailable: backend did not collect live evidence.", "error");
+      } else if (scanRecord.status === "partial") {
+        showToast("Scan partially completed; some modules were unavailable.", "info");
+      } else {
+        showToast(`Scan completed: ${scanRecord.module_count} module(s) on ${scanRecord.target} in ${scanRecord.duration_s}s`, "success");
+      }
     } finally {
       runBtn.disabled = false;
       runBtn.innerHTML = `<span>▶</span><span>Run Recon</span>`;
