@@ -157,24 +157,19 @@ def execute_module_safe(
     timeout_sec: int = 12,
 ) -> Tuple[str, float, bool]:
     """
-    Execute a module script with a strict timeout and enrich output if sandbox
-    network restrictions or missing 3rd-party API keys prevent live probing.
+    Execute a module script with a strict timeout.
+    Failed, incomplete, or unavailable execution is reported without fabricated findings.
     """
     start = time.time()
     cleaned_target = clean_domain_input(target) or "github.com"
     script_path = resolve_script_path(script_name)
     raw_out = ""
     used_fallback = False
-
-    if IS_SERVERLESS:
-        # In serverless environments (Vercel / AWS Lambda), run fast in-process telemetry + HTTPS probe
-        enriched = synthesize_module_telemetry(mod_meta, cleaned_target, threads, module_opts or {}, "")
-        elapsed = round(max(0.18, time.time() - start), 2)
-        return enriched, elapsed, False
+    process_exit_code: Optional[int] = None
 
     if os.path.isfile(script_path):
-        mod_name = os.path.splitext(script_name)[0]
-        cmd = [sys.executable, "-m", f"argus.modules.{mod_name}", cleaned_target, str(threads)]
+        # Catalog scripts are packaged as root-level files in this repository, not argus.modules.
+        cmd = [sys.executable, script_path, cleaned_target, str(threads)]
         if module_opts:
             cmd.append(json.dumps(module_opts))
         env = os.environ.copy()
@@ -194,10 +189,12 @@ def execute_module_safe(
                 env=env,
             )
             stdout_data, _ = proc.communicate(timeout=timeout_sec)
+            process_exit_code = proc.returncode
             raw_out = strip_ansi(stdout_data or "")
         except subprocess.TimeoutExpired:
             proc.kill()
-            raw_out = f"[*] Module {script_name} reached time budget ({timeout_sec}s); synthesizing captured telemetry...\n"
+            proc.communicate()
+            raw_out = f"[*] Module {script_name} reached time budget ({timeout_sec}s); no telemetry was generated.\n"
             used_fallback = True
         except Exception as exc:
             raw_out = f"[!] Subprocess execution notice: {exc}\n"
@@ -224,151 +221,19 @@ def execute_module_safe(
         ln for ln in raw_out.splitlines()
         if ln.strip() and not ln.strip().startswith("=")
     ]
-    if used_fallback or len(meaningful_lines) < 4 or any(m in lower_out for m in failure_markers):
-        enriched = synthesize_module_telemetry(mod_meta, cleaned_target, threads, module_opts or {}, raw_out)
+    if used_fallback or process_exit_code not in (None, 0) or len(meaningful_lines) < 4 or any(m in lower_out for m in failure_markers):
         elapsed = round(time.time() - start, 2)
-        return enriched, elapsed, True
+        diagnostic = raw_out.strip() or "The module returned no usable output."
+        message = (
+            f"[UNAVAILABLE] Live evidence was not collected by {script_name}.\n"
+            "[Evidence status] Findings are not inferred from missing output or network errors.\n"
+            "[Evidence status] No synthetic telemetry was generated.\n"
+            f"[Diagnostic] {diagnostic[:1200]}"
+        )
+        return message, elapsed, True
 
     elapsed = round(time.time() - start, 2)
     return raw_out, elapsed, False
-
-
-def synthesize_module_telemetry(
-    mod_meta: Dict[str, Any],
-    domain: str,
-    threads: int,
-    opts: Dict[str, Any],
-    partial_out: str = "",
-) -> str:
-    """
-    Produce rich, deterministic, protocol-accurate telemetry for modules when
-    running inside a restricted network sandbox or without 3rd-party paid API keys.
-    Also performs live HTTPS probing if the target is reachable (e.g. github.com).
-    """
-    mod_id = str(mod_meta.get("number", "0"))
-    name = mod_meta.get("name", "Recon Module")
-    section = mod_meta.get("section", "Network & Infrastructure")
-    script = mod_meta.get("script", "")
-    digest = hashlib.sha256(f"{domain}:{mod_id}:{name}".encode()).hexdigest()
-
-    # Deterministic realistic IP & ASN derived from domain hash (or real for known hosts)
-    known_ips = {
-        "github.com": ("140.82.121.4", "AS36459 GitHub, Inc.", "San Francisco, US"),
-        "api.github.com": ("140.82.121.6", "AS36459 GitHub, Inc.", "San Francisco, US"),
-        "pypi.org": ("151.101.128.223", "AS54113 Fastly, Inc.", "Global Anycast CDN"),
-        "registry.npmjs.org": ("104.16.29.34", "AS13335 Cloudflare, Inc.", "Global Anycast Edge"),
-        "example.com": ("93.184.215.14", "AS15133 Edgecast / Digicert", "Los Angeles, US"),
-        "cloudflare.com": ("104.16.132.229", "AS13335 Cloudflare, Inc.", "San Francisco, US"),
-    }
-    if domain in known_ips:
-        ip_addr, asn_label, geo_loc = known_ips[domain]
-    else:
-        o1 = 104
-        o2 = (int(digest[0:2], 16) % 120) + 16
-        o3 = (int(digest[2:4], 16) % 250) + 1
-        o4 = (int(digest[4:6], 16) % 250) + 2
-        ip_addr = f"{o1}.{o2}.{o3}.{o4}"
-        asn_num = 13335 if int(digest[6:8], 16) % 2 == 0 else 16509
-        asn_label = f"AS{asn_num} Cloud Edge Network"
-        geo_loc = "Frankfurt, DE (Anycast Edge)"
-
-    # Try live HTTPS header probe if target is reachable over HTTPS proxy
-    live_headers: Dict[str, str] = {}
-    live_status = None
-    try:
-        import requests
-        r = requests.get(f"https://{domain}", timeout=3.5, headers={"User-Agent": settings.USER_AGENT})
-        live_status = r.status_code
-        live_headers = dict(r.headers)
-    except Exception:
-        pass
-
-    server_hdr = live_headers.get("Server") or live_headers.get("server") or "cloudflare-nginx/1.26"
-    hsts_hdr = live_headers.get("Strict-Transport-Security") or "max-age=31536000; includeSubDomains; preload"
-    csp_hdr = live_headers.get("Content-Security-Policy")
-    xfo_hdr = live_headers.get("X-Frame-Options") or "SAMEORIGIN"
-    xcto_hdr = live_headers.get("X-Content-Type-Options") or "nosniff"
-
-    lines = [
-        "============================================================",
-        f"   ARAGOS v3.0 — {name} [Module #{mod_id}]",
-        "============================================================",
-        f"[*] Target Scope   : {domain} ({ip_addr})",
-        f"[*] Category       : {section}",
-        f"[*] Engine Threads : {threads} | Script: {script}",
-        f"[*] ASN / Geo Edge : {asn_label} — {geo_loc}",
-        "",
-    ]
-
-    n_low = name.lower()
-    if "dns" in n_low or "zone" in n_low or "subdomain" in n_low or "spf" in n_low or "dmarc" in n_low or "txt" in n_low:
-        lines.extend([
-            "┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-            "┃ Record / Check   ┃ Telemetry Value                                          ┃ Status   ┃",
-            "┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-            f"│ A (IPv4)         │ {ip_addr} (TTL: 300s)                                    │ OK       │",
-            f"│ AAAA (IPv6)      │ 2606:4700:3030::{digest[:4]}:{digest[4:8]} (TTL: 300s)                 │ OK       │",
-            f"│ NS (Authoritative)│ ns1.{domain}, ns2.{domain}                              │ OK       │",
-            f"│ MX (Mail Exch.)  │ 10 aspmx.l.google.com, 20 alt1.aspmx.l.google.com        │ OK       │",
-            f"│ TXT / SPF        │ v=spf1 include:_spf.{domain} ~all                        │ WARN     │",
-            f"│ DMARC Policy     │ v=DMARC1; p=quarantine; rua=mailto:dmarc@{domain}        │ OK       │",
-            f"│ CAA Restriction  │ 0 issue \"letsencrypt.org\"; 0 issue \"digicert.com\"        │ OK       │",
-            f"│ Subdomains Found │ api.{domain}, auth.{domain}, cdn.{domain}, dev.{domain}  │ INFO     │",
-            "└──────────────────┴──────────────────────────────────────────────────────────┴──────────┘",
-            "[!] Advisory (WARN): SPF uses softfail (~all) instead of strict reject (-all).",
-            "[+] DNS & Zone reconnaissance completed successfully.",
-        ])
-    elif "ssl" in n_low or "tls" in n_low or "cert" in n_low or "cipher" in n_low:
-        lines.extend([
-            "┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-            "┃ Cryptographic Metric   ┃ Negotiated Telemetry                               ┃ Status   ┃",
-            "┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-            f"│ Subject Common Name    │ *.{domain} / {domain}                              │ VALID    │",
-            "│ Issuer Authority       │ DigiCert Global G2 TLS RSA SHA256 2020 CA1         │ OK       │",
-            "│ Protocol Support       │ TLSv1.3 (Preferred), TLSv1.2 (Enabled)             │ SECURE   │",
-            "│ Legacy Protocols       │ SSLv3: Disabled, TLSv1.0: Disabled, TLSv1.1: Off   │ OK       │",
-            "│ Primary Cipher Suite   │ TLS_AES_256_GCM_SHA384 (ECDHE X25519 / 256-bit)    │ OK       │",
-            "│ Secondary Cipher Suite │ TLS_CHACHA20_POLY1305_SHA256 (Forward Secrecy)     │ OK       │",
-            "│ Certificate Validity   │ 248 days remaining (Auto-Renew CT Logged)          │ OK       │",
-            "│ OCSP Stapling & SCT    │ Stapled Response Valid | 3 Embedded SCTs           │ OK       │",
-            "└────────────────────────┴────────────────────────────────────────────────────┴──────────┘",
-            "[+] Cryptographic handshake & certificate chain verified.",
-        ])
-    elif "port" in n_low or "ssh" in n_low or "snmp" in n_low or "udp" in n_low or "icmp" in n_low or "traceroute" in n_low or "bgp" in n_low or "asn" in n_low:
-        lines.extend([
-            "┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓",
-            "┃ Port / Proto┃ State        ┃ Service / Banner Fingerprint       ┃ Assessment ┃",
-            "┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩",
-            "│ 80 / TCP    │ OPEN         │ HTTP -> 301 Redirect to HTTPS      │ OK         │",
-            f"│ 443 / TCP   │ OPEN         │ HTTPS ({server_hdr[:24]})          │ OK         │",
-            "│ 443 / UDP   │ OPEN         │ QUIC / HTTP/3 ALPN h3              │ OK         │",
-            "│ 22 / TCP    │ FILTERED     │ OpenSSH_9.6p1 (Bastion ACL)        │ INFO       │",
-            "│ 8443 / TCP  │ OPEN (WARN)  │ Edge Admin / Alt-HTTPS Listener    │ WARN       │",
-            "└─────────────┴──────────────┴────────────────────────────────────┴────────────┘",
-            f"[*] Routing Origin: {asn_label} | RPKI ROA Status: VALID",
-            "[!] Notice (WARN): Alternate TLS port 8443/TCP responds to external SYN probes.",
-            "[+] Network perimeter & port matrix scan completed.",
-        ])
-    else:
-        csp_status = "Configured (OK)" if csp_hdr else "Missing / Permissive (WARN)"
-        http_code_str = f"HTTP {live_status}" if live_status else "HTTP 200 OK"
-        lines.extend([
-            "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓",
-            "┃ Inspection Vector          ┃ Observed Value / Finding                       ┃ Severity ┃",
-            "┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩",
-            f"│ Endpoint Status            │ https://{domain} ({http_code_str})             │ OK       │",
-            f"│ Edge / Server Stack        │ {server_hdr[:44]}                              │ INFO     │",
-            f"│ Strict-Transport-Security  │ {hsts_hdr[:44]}                                │ OK       │",
-            f"│ Content-Security-Policy    │ {csp_status[:44]}                              │ WARN     │",
-            f"│ X-Frame-Options            │ {xfo_hdr[:44]}                                 │ OK       │",
-            f"│ X-Content-Type-Options     │ {xcto_hdr[:44]}                                │ OK       │",
-            f"│ Module Heuristic Check     │ {name[:44]} verified                           │ OK       │",
-            "└────────────────────────────┴────────────────────────────────────────────────┴──────────┘",
-            f"[!] Security Finding (WARN): Review Content-Security-Policy and Permissions-Policy headers on {domain}.",
-            f"[+] {name} analysis completed successfully.",
-        ])
-
-    return "\n".join(lines) + "\n"
 
 
 def extract_findings_from_output(mod_name: str, text: str, severity: str) -> List[Dict[str, str]]:
@@ -385,12 +250,7 @@ def extract_findings_from_output(mod_name: str, text: str, severity: str) -> Lis
                     "severity": "ALERT" if ("critical" in clean_ln.lower() or "alert" in clean_ln.lower() or "vulnerable" in clean_ln.lower()) else ("WARN" if severity in ("WARN", "ALERT") else "INFO"),
                     "detail": clean_ln[:220],
                 })
-    if not findings:
-        findings.append({
-            "module": mod_name,
-            "severity": severity,
-            "detail": f"{mod_name} completed inspection with status {severity}.",
-        })
+    # No matching evidence means no finding; never manufacture a generic success/finding row.
     return findings[:8]
 
 
@@ -505,16 +365,21 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
             for smid in sub_ids:
                 stool = tools_mapping.get(str(smid))
                 if stool and stool.get("script"):
-                    out, dur, _ = execute_module_safe(stool["script"], stool, target, threads, req.options)
-                    sev = parse_output_severity(out)
+                    out, dur, unavailable = execute_module_safe(stool["script"], stool, target, threads, req.options)
+                    sev = "UNAVAILABLE" if unavailable else parse_output_severity(out)
                     outputs[stool["name"]] = out
                     severities[stool["name"]] = sev
-                    runtimes.append({"id": smid, "module": stool["name"], "section": stool["section"], "severity": sev, "duration_s": dur})
-                    all_findings.extend(extract_findings_from_output(stool["name"], out, sev))
+                    runtimes.append({
+                        "id": smid, "module": stool["name"], "section": stool["section"],
+                        "severity": sev, "status": "unavailable" if unavailable else "completed",
+                        "duration_s": dur,
+                    })
+                    if not unavailable:
+                        all_findings.extend(extract_findings_from_output(stool["name"], out, sev))
             continue
 
-        out, dur, _ = execute_module_safe(tool["script"], tool, target, threads, req.options)
-        sev = parse_output_severity(out)
+        out, dur, unavailable = execute_module_safe(tool["script"], tool, target, threads, req.options)
+        sev = "UNAVAILABLE" if unavailable else parse_output_severity(out)
         outputs[tool["name"]] = out
         severities[tool["name"]] = sev
         runtimes.append({
@@ -522,9 +387,11 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
             "module": tool["name"],
             "section": tool["section"],
             "severity": sev,
+            "status": "unavailable" if unavailable else "completed",
             "duration_s": dur,
         })
-        all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
+        if not unavailable:
+            all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
 
     total_duration = round(time.time() - start_ts, 2)
 
@@ -534,8 +401,16 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
     except Exception:
         pass
 
+    unavailable_count = sum(1 for item in runtimes if item.get("status") == "unavailable")
+    scan_status = (
+        "unavailable" if not runtimes or unavailable_count == len(runtimes)
+        else "partial" if unavailable_count
+        else "completed"
+    )
     scan_record: Dict[str, Any] = {
         "scan_id": scan_id,
+        "status": scan_status,
+        "evidence_policy": "no-synthetic-telemetry-v1",
         "target": target,
         "mode": mode,
         "profile": req.profile,
@@ -550,8 +425,13 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
         "ai_analysis": None,
     }
 
-    if req.auto_ai_analyze and outputs:
-        scan_record["ai_analysis"] = ai_engine.analyze_scan_report(scan_record)
+    completed_names = {name for name, severity in severities.items() if severity != "UNAVAILABLE"}
+    if req.auto_ai_analyze and completed_names:
+        analysis_record = dict(scan_record)
+        analysis_record["outputs"] = {name: outputs[name] for name in completed_names}
+        analysis_record["severities"] = {name: severities[name] for name in completed_names}
+        analysis_record["findings"] = list(all_findings)
+        scan_record["ai_analysis"] = ai_engine.analyze_scan_report(analysis_record)
 
     SCAN_HISTORY.insert(0, scan_record)
     if len(SCAN_HISTORY) > 50:
@@ -560,52 +440,7 @@ def run_scan_job(req: ScanRequest) -> Dict[str, Any]:
     return scan_record
 
 
-# --- Seed an initial scan in-memory so cold starts on Vercel & local are instant (<5ms) ---
-def seed_initial_telemetry():
-    if SCAN_HISTORY:
-        return
-    try:
-        target = "github.com"
-        seed_ids = ["3", "12", "115"]
-        outputs: Dict[str, str] = {}
-        severities: Dict[str, str] = {}
-        runtimes: List[Dict[str, Any]] = []
-        all_findings: List[Dict[str, str]] = []
-        for mid in seed_ids:
-            tool = tools_mapping.get(mid)
-            if not tool:
-                continue
-            out = synthesize_module_telemetry(tool, target, 2, {}, "")
-            sev = parse_output_severity(out)
-            outputs[tool["name"]] = out
-            severities[tool["name"]] = sev
-            runtimes.append({"id": mid, "module": tool["name"], "section": tool["section"], "severity": sev, "duration_s": 0.28})
-            all_findings.extend(extract_findings_from_output(tool["name"], out, sev))
-        scan_record: Dict[str, Any] = {
-            "scan_id": "scan-init001",
-            "target": target,
-            "mode": "multi",
-            "profile": "speed",
-            "threads": 2,
-            "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "duration_s": 0.84,
-            "module_count": len(outputs),
-            "outputs": outputs,
-            "severities": severities,
-            "runtimes": runtimes,
-            "findings": all_findings,
-            "ai_analysis": None,
-        }
-        scan_record["ai_analysis"] = ai_engine.analyze_scan_report(scan_record)
-        SCAN_HISTORY.insert(0, scan_record)
-    except Exception as exc:
-        print(f"Initial seed scan warning: {exc}")
-
-
-seed_initial_telemetry()
-
-
-# --- API Routes ---
+# Do not seed scan history with fabricated telemetry. Empty history means no scan has run.\n\n# --- API Routes ---
 
 @app.get("/api/health")
 def api_health():
@@ -727,6 +562,7 @@ def api_get_scans():
     for s in SCAN_HISTORY:
         summaries.append({
             "scan_id": s["scan_id"],
+            "status": s.get("status", "unknown"),
             "target": s["target"],
             "mode": s["mode"],
             "profile": s["profile"],
@@ -737,8 +573,8 @@ def api_get_scans():
             "severities": s["severities"],
             "runtimes": s["runtimes"],
             "findings_count": len(s.get("findings", [])),
-            "risk_score": (s.get("ai_analysis") or {}).get("risk_score", 25),
-            "risk_level": (s.get("ai_analysis") or {}).get("risk_level", "LOW"),
+            "risk_score": (s.get("ai_analysis") or {}).get("risk_score"),
+            "risk_level": (s.get("ai_analysis") or {}).get("risk_level", "UNASSESSED"),
         })
     return {
         "total": len(summaries),
@@ -870,23 +706,30 @@ def api_ai_unload_models():
 @app.post("/api/ai/chat")
 def api_ai_chat(req: AIChatRequest):
     scan_ctx = None
+    sc = None
     if req.scan_id:
-        sc = next((s for s in SCAN_HISTORY if s["scan_id"] == req.scan_id), None)
-        if sc:
+        sc = next((item for item in SCAN_HISTORY if item["scan_id"] == req.scan_id), None)
+    else:
+        sc = next(
+            (
+                item for item in SCAN_HISTORY
+                if any(value != "UNAVAILABLE" for value in item.get("severities", {}).values())
+            ),
+            None,
+        )
+
+    if sc:
+        completed_names = [
+            name for name, severity in sc.get("severities", {}).items()
+            if severity != "UNAVAILABLE"
+        ]
+        if completed_names:
             scan_ctx = {
                 "target": sc["target"],
-                "severities": sc["severities"],
+                "severities": {name: sc["severities"][name] for name in completed_names},
                 "findings": sc.get("findings", [])[:15],
-                "sample_outputs": {k: v[:1000] for k, v in list(sc["outputs"].items())[:4]},
+                "sample_outputs": {name: sc["outputs"][name][:1000] for name in completed_names[:4]},
             }
-    elif SCAN_HISTORY:
-        sc = SCAN_HISTORY[0]
-        scan_ctx = {
-            "target": sc["target"],
-            "severities": sc["severities"],
-            "findings": sc.get("findings", [])[:12],
-            "sample_outputs": {k: v[:800] for k, v in list(sc["outputs"].items())[:3]},
-        }
 
     return ai_engine.chat(
         messages=req.messages,
@@ -899,29 +742,47 @@ def api_ai_chat(req: AIChatRequest):
 @app.post("/api/ai/analyze")
 def api_ai_analyze(req: AIAnalyzeRequest):
     if req.scan_id:
-        sc = next((s for s in SCAN_HISTORY if s["scan_id"] == req.scan_id), None)
+        sc = next((item for item in SCAN_HISTORY if item["scan_id"] == req.scan_id), None)
         if not sc:
             raise HTTPException(status_code=404, detail="Scan not found")
-        analysis = ai_engine.analyze_scan_report(sc, model=req.model)
-        sc["ai_analysis"] = analysis
-        return analysis
-
-    if req.outputs:
-        synthetic_scan = {
+        source_scan = sc
+    elif req.outputs:
+        # This endpoint can analyze caller-provided output, but does not claim it was live-collected.
+        source_scan = {
             "target": req.target or GLOBAL_SETTINGS["default_target"],
             "outputs": req.outputs,
-            "severities": req.severities or {k: parse_output_severity(v) for k, v in req.outputs.items()},
+            "severities": req.severities or {key: parse_output_severity(value) for key, value in req.outputs.items()},
             "findings": [],
         }
-        return ai_engine.analyze_scan_report(synthetic_scan, model=req.model)
+    else:
+        source_scan = next(
+            (
+                item for item in SCAN_HISTORY
+                if any(value != "UNAVAILABLE" for value in item.get("severities", {}).values())
+            ),
+            None,
+        )
+        if not source_scan:
+            raise HTTPException(status_code=409, detail="No live scan evidence is available to analyze")
 
-    if SCAN_HISTORY:
-        sc = SCAN_HISTORY[0]
-        analysis = ai_engine.analyze_scan_report(sc, model=req.model)
-        sc["ai_analysis"] = analysis
-        return analysis
+    completed_names = [
+        name for name, severity in source_scan.get("severities", {}).items()
+        if severity != "UNAVAILABLE"
+    ]
+    if not completed_names:
+        raise HTTPException(status_code=409, detail="No live scan evidence is available to analyze")
 
-    raise HTTPException(status_code=400, detail="No scan data available to analyze")
+    analysis_record = dict(source_scan)
+    analysis_record["outputs"] = {
+        name: source_scan["outputs"][name] for name in completed_names
+    }
+    analysis_record["severities"] = {
+        name: source_scan["severities"][name] for name in completed_names
+    }
+    analysis = ai_engine.analyze_scan_report(analysis_record, model=req.model)
+    if req.scan_id or (not req.outputs and source_scan in SCAN_HISTORY):
+        source_scan["ai_analysis"] = analysis
+    return analysis
 
 
 # --- Configuration & API Keys Routes ---
