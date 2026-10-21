@@ -60,6 +60,14 @@ class EvidenceIntegrityTests(unittest.TestCase):
         self.assertEqual(record["runtimes"][0]["status"], "unavailable")
         analyze.assert_not_called()
 
+    def test_empty_output_does_not_create_a_generic_finding(self):
+        findings = server.extract_findings_from_output(
+            "Test Module",
+            "Inspection completed without a matching finding.",
+            "OK",
+        )
+        self.assertEqual(findings, [])
+
     def test_ai_analysis_rejects_scan_without_live_evidence(self):
         server.SCAN_HISTORY.append({
             "scan_id": "scan-test",
