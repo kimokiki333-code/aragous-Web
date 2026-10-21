@@ -453,7 +453,7 @@
   function renderActiveScan(scan) {
     if (!scan) return;
     document.getElementById("kpi-active-target").textContent = scan.target;
-    document.getElementById("kpi-scan-meta").textContent = `Scan ${scan.scan_id} · ${scan.module_count} mod(s) · ${scan.duration_s}s`;
+    document.getElementById("kpi-scan-meta").textContent = `Scan ${scan.scan_id} · ${String(scan.status || "unknown").toUpperCase()} · ${scan.module_count} mod(s) · ${scan.duration_s}s`;
 
     const counts = { OK: 0, INFO: 0, WARN: 0, ALERT: 0 };
     Object.values(scan.severities || {}).forEach((s) => { counts[s] = (counts[s] || 0) + 1; });
@@ -468,7 +468,9 @@
     document.getElementById("kpi-risk-score").textContent = score === "—" ? "—" : `${score}/100`;
     const riskBadge = document.getElementById("kpi-risk-level");
     riskBadge.textContent = level;
-    riskBadge.className = "sev-badge " + (level === "CRITICAL" || level === "HIGH" ? "sev-ALERT" : level === "MODERATE" ? "sev-WARN" : "sev-OK");
+    riskBadge.className = level === "UNASSESSED"
+      ? "sev-badge"
+      : "sev-badge " + (level === "CRITICAL" || level === "HIGH" ? "sev-ALERT" : level === "MODERATE" ? "sev-WARN" : "sev-OK");
 
     const pillsWrap = document.getElementById("module-output-pills");
     const modNames = Object.keys(scan.outputs || {});
@@ -1051,13 +1053,14 @@
         const rawScore = s.risk_score ?? (s.ai_analysis && s.ai_analysis.risk_score);
         const rScore = rawScore === undefined || rawScore === null ? "—" : rawScore;
         const rLevel = s.risk_level || (s.ai_analysis && s.ai_analysis.risk_level) || "UNASSESSED";
+        const riskClass = rLevel === "UNASSESSED" ? "sev-badge" : "sev-badge " + (rLevel === "HIGH" || rLevel === "CRITICAL" ? "sev-ALERT" : rLevel === "MODERATE" ? "sev-WARN" : "sev-OK");
         return `
         <div class="glass-panel-elevated" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
           <div>
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-family:var(--font-mono);font-size:0.84rem;color:var(--cyan);font-weight:700;">${escapeHtml(s.scan_id)}</span>
               <strong style="font-size:0.96rem;color:#fff;">${escapeHtml(s.target)}</strong>
-              <span class="sev-badge ${rLevel === "HIGH" || rLevel === "CRITICAL" ? "sev-ALERT" : rLevel === "MODERATE" ? "sev-WARN" : "sev-OK"}">
+              <span class="${riskClass}">
                 Risk: ${rScore === "—" ? "—" : `${rScore}/100`} (${escapeHtml(rLevel)})
               </span>
             </div>
