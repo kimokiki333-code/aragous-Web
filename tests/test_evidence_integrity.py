@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import server
@@ -26,6 +28,52 @@ class EvidenceIntegrityTests(unittest.TestCase):
         self.assertIn("no synthetic telemetry was generated", output.lower())
         self.assertNotIn("ASN / Geo Edge", output)
         self.assertNotIn("OpenSSH", output)
+
+    def test_real_subprocess_output_is_preserved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script = Path(temp_dir) / "probe.py"
+            script.write_text(
+                "print('OBSERVED: line one')\n"
+                "print('OBSERVED: line two')\n"
+                "print('OBSERVED: line three')\n"
+                "print('OBSERVED: line four')\n",
+                encoding="utf-8",
+            )
+            with patch("server.resolve_script_path", return_value=str(script)):
+                output, _duration, unavailable = server.execute_module_safe(
+                    "probe.py",
+                    {"name": "Probe"},
+                    "example.com",
+                    timeout_sec=3,
+                )
+
+        self.assertFalse(unavailable)
+        self.assertIn("OBSERVED: line one", output)
+        self.assertIn("OBSERVED: line four", output)
+
+    def test_nonzero_subprocess_exit_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script = Path(temp_dir) / "probe_fail.py"
+            script.write_text(
+                "import sys\n"
+                "print('output line one')\n"
+                "print('output line two')\n"
+                "print('output line three')\n"
+                "print('output line four')\n"
+                "sys.exit(2)\n",
+                encoding="utf-8",
+            )
+            with patch("server.resolve_script_path", return_value=str(script)):
+                output, _duration, unavailable = server.execute_module_safe(
+                    "probe_fail.py",
+                    {"name": "Probe"},
+                    "example.com",
+                    timeout_sec=3,
+                )
+
+        self.assertTrue(unavailable)
+        self.assertIn("[UNAVAILABLE]", output)
+        self.assertIn("output line four", output)
 
     def test_unavailable_module_does_not_create_findings_or_risk_analysis(self):
         fake_tool = {
