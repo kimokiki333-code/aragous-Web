@@ -400,6 +400,7 @@
 
     try {
       let scanRecord;
+      let backendResponded = false;
       try {
         scanRecord = await apiPost("/api/scan/run", {
           target,
@@ -410,6 +411,7 @@
           options: opts.options || {},
           auto_ai_analyze: true
         });
+        backendResponded = true;
       } catch (_) {
         scanRecord = runClientScanJob({
           target,
@@ -419,7 +421,7 @@
           profile
         });
       }
-      if (scanRecord.status !== "unavailable") {
+      if (backendResponded) {
         try {
           const scansData = await apiGet("/api/scans");
           state.scans = scansData.scans || [scanRecord];
