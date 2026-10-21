@@ -1046,8 +1046,9 @@
     container.innerHTML = state.scans
       .map((s) => {
         const modNames = Object.keys(s.severities || {});
-        const rScore = s.risk_score || (s.ai_analysis && s.ai_analysis.risk_score) || 24;
-        const rLevel = s.risk_level || (s.ai_analysis && s.ai_analysis.risk_level) || "LOW";
+        const rawScore = s.risk_score ?? (s.ai_analysis && s.ai_analysis.risk_score);
+        const rScore = rawScore === undefined || rawScore === null ? "—" : rawScore;
+        const rLevel = s.risk_level || (s.ai_analysis && s.ai_analysis.risk_level) || "UNASSESSED";
         return `
         <div class="glass-panel-elevated" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
           <div>
@@ -1055,7 +1056,7 @@
               <span style="font-family:var(--font-mono);font-size:0.84rem;color:var(--cyan);font-weight:700;">${escapeHtml(s.scan_id)}</span>
               <strong style="font-size:0.96rem;color:#fff;">${escapeHtml(s.target)}</strong>
               <span class="sev-badge ${rLevel === "HIGH" || rLevel === "CRITICAL" ? "sev-ALERT" : rLevel === "MODERATE" ? "sev-WARN" : "sev-OK"}">
-                Risk: ${rScore}/100 (${escapeHtml(rLevel)})
+                Risk: ${rScore === "—" ? "—" : `${rScore}/100`} (${escapeHtml(rLevel)})
               </span>
             </div>
             <div style="font-size:0.76rem;color:var(--text-secondary);margin-top:4px;">
