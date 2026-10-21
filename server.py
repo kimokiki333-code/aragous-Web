@@ -157,8 +157,8 @@ def execute_module_safe(
     timeout_sec: int = 12,
 ) -> Tuple[str, float, bool]:
     """
-    Execute a module script with a strict timeout and enrich output if sandbox
-    network restrictions or missing 3rd-party API keys prevent live probing.
+    Execute a module script with a strict timeout.
+    Failed, incomplete, or unavailable execution is reported without fabricated findings.
     """
     start = time.time()
     cleaned_target = clean_domain_input(target) or "github.com"
@@ -193,7 +193,7 @@ def execute_module_safe(
             raw_out = strip_ansi(stdout_data or "")
         except subprocess.TimeoutExpired:
             proc.kill()
-            raw_out = f"[*] Module {script_name} reached time budget ({timeout_sec}s); synthesizing captured telemetry...\n"
+            raw_out = f"[*] Module {script_name} reached time budget ({timeout_sec}s); no telemetry was generated.\n"
             used_fallback = True
         except Exception as exc:
             raw_out = f"[!] Subprocess execution notice: {exc}\n"
@@ -709,23 +709,30 @@ def api_ai_unload_models():
 @app.post("/api/ai/chat")
 def api_ai_chat(req: AIChatRequest):
     scan_ctx = None
+    sc = None
     if req.scan_id:
-        sc = next((s for s in SCAN_HISTORY if s["scan_id"] == req.scan_id), None)
-        if sc:
+        sc = next((item for item in SCAN_HISTORY if item["scan_id"] == req.scan_id), None)
+    else:
+        sc = next(
+            (
+                item for item in SCAN_HISTORY
+                if any(value != "UNAVAILABLE" for value in item.get("severities", {}).values())
+            ),
+            None,
+        )
+
+    if sc:
+        completed_names = [
+            name for name, severity in sc.get("severities", {}).items()
+            if severity != "UNAVAILABLE"
+        ]
+        if completed_names:
             scan_ctx = {
                 "target": sc["target"],
-                "severities": sc["severities"],
+                "severities": {name: sc["severities"][name] for name in completed_names},
                 "findings": sc.get("findings", [])[:15],
-                "sample_outputs": {k: v[:1000] for k, v in list(sc["outputs"].items())[:4]},
+                "sample_outputs": {name: sc["outputs"][name][:1000] for name in completed_names[:4]},
             }
-    elif SCAN_HISTORY and SCAN_HISTORY[0].get("status") != "unavailable":
-        sc = SCAN_HISTORY[0]
-        scan_ctx = {
-            "target": sc["target"],
-            "severities": sc["severities"],
-            "findings": sc.get("findings", [])[:12],
-            "sample_outputs": {k: v[:800] for k, v in list(sc["outputs"].items())[:3]},
-        }
 
     return ai_engine.chat(
         messages=req.messages,
@@ -738,31 +745,47 @@ def api_ai_chat(req: AIChatRequest):
 @app.post("/api/ai/analyze")
 def api_ai_analyze(req: AIAnalyzeRequest):
     if req.scan_id:
-        sc = next((s for s in SCAN_HISTORY if s["scan_id"] == req.scan_id), None)
+        sc = next((item for item in SCAN_HISTORY if item["scan_id"] == req.scan_id), None)
         if not sc:
             raise HTTPException(status_code=404, detail="Scan not found")
-        if not any(value != "UNAVAILABLE" for value in sc.get("severities", {}).values()):
-            raise HTTPException(status_code=409, detail="No live scan evidence is available to analyze")
-        analysis = ai_engine.analyze_scan_report(sc, model=req.model)
-        sc["ai_analysis"] = analysis
-        return analysis
-
-    if req.outputs:
-        synthetic_scan = {
+        source_scan = sc
+    elif req.outputs:
+        # This endpoint can analyze caller-provided output, but does not claim it was live-collected.
+        source_scan = {
             "target": req.target or GLOBAL_SETTINGS["default_target"],
             "outputs": req.outputs,
-            "severities": req.severities or {k: parse_output_severity(v) for k, v in req.outputs.items()},
+            "severities": req.severities or {key: parse_output_severity(value) for key, value in req.outputs.items()},
             "findings": [],
         }
-        return ai_engine.analyze_scan_report(synthetic_scan, model=req.model)
+    else:
+        source_scan = next(
+            (
+                item for item in SCAN_HISTORY
+                if any(value != "UNAVAILABLE" for value in item.get("severities", {}).values())
+            ),
+            None,
+        )
+        if not source_scan:
+            raise HTTPException(status_code=409, detail="No live scan evidence is available to analyze")
 
-    if SCAN_HISTORY:
-        sc = SCAN_HISTORY[0]
-        analysis = ai_engine.analyze_scan_report(sc, model=req.model)
-        sc["ai_analysis"] = analysis
-        return analysis
+    completed_names = [
+        name for name, severity in source_scan.get("severities", {}).items()
+        if severity != "UNAVAILABLE"
+    ]
+    if not completed_names:
+        raise HTTPException(status_code=409, detail="No live scan evidence is available to analyze")
 
-    raise HTTPException(status_code=400, detail="No scan data available to analyze")
+    analysis_record = dict(source_scan)
+    analysis_record["outputs"] = {
+        name: source_scan["outputs"][name] for name in completed_names
+    }
+    analysis_record["severities"] = {
+        name: source_scan["severities"][name] for name in completed_names
+    }
+    analysis = ai_engine.analyze_scan_report(analysis_record, model=req.model)
+    if req.scan_id or (not req.outputs and source_scan in SCAN_HISTORY):
+        source_scan["ai_analysis"] = analysis
+    return analysis
 
 
 # --- Configuration & API Keys Routes ---
