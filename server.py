@@ -193,6 +193,7 @@ def execute_module_safe(
             raw_out = strip_ansi(stdout_data or "")
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.communicate()
             raw_out = f"[*] Module {script_name} reached time budget ({timeout_sec}s); no telemetry was generated.\n"
             used_fallback = True
         except Exception as exc:
