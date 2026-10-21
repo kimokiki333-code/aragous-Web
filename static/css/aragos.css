@@ -882,3 +882,74 @@ html, body {
     grid-row: auto;
   }
 }
+
+
+/* ARAGOS / ARGUS — BLACK & GOLD FIELD CONSOLE
+   Design-only layer: existing HTML IDs and interactions are preserved. */
+:root {
+  color-scheme: dark;
+  --bg-deep:#090908; --glass-bg:rgba(20,19,15,.96); --glass-bg-elevated:rgba(27,25,19,.98);
+  --glass-bg-hover:rgba(42,37,23,.98); --glass-border:rgba(225,183,75,.18);
+  --glass-border-bright:rgba(239,197,75,.65); --glass-highlight:inset 0 1px 0 rgba(255,255,255,.035);
+  --glass-shadow:0 12px 32px rgba(0,0,0,.32);
+  --cyan:#e8bd4a; --cyan-soft:rgba(232,189,74,.13); --violet:#d4b46a; --violet-soft:rgba(212,180,106,.12);
+  --emerald:#a7c78c; --emerald-soft:rgba(167,199,140,.12); --amber:#f1c232; --amber-soft:rgba(241,194,50,.13);
+  --rose:#ef7770; --rose-soft:rgba(239,119,112,.12);
+  --text-primary:#f6f2e8; --text-secondary:#b7b0a0; --text-muted:#817969;
+  --font-display:'Space Grotesk','Segoe UI',sans-serif; --font-sans:Inter,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',Consolas,monospace;
+}
+html,body{background:#090908}
+body{background-image:radial-gradient(ellipse at 52% -25%,rgba(189,145,41,.10),transparent 48%),linear-gradient(180deg,#0b0b09 0%,#090908 100%)}
+#aragos-webgl-canvas{opacity:.19;filter:grayscale(1) sepia(.28)}
+.ambient-aurora{background:radial-gradient(circle at 12% 8%,rgba(239,194,70,.065),transparent 35%),radial-gradient(circle at 88% 72%,rgba(255,255,255,.025),transparent 34%)}
+.app-shell{grid-template-columns:238px minmax(0,1fr);grid-template-rows:88px minmax(0,1fr);gap:12px;padding:12px}
+.glass-panel,.glass-panel-elevated{background:rgba(17,17,14,.96);backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid rgba(231,190,79,.17);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.025)}
+.glass-card-interactive:hover{border-color:rgba(239,197,75,.55);background:#1b1a14;transform:translateY(-1px);box-shadow:0 12px 28px rgba(0,0,0,.3)}
+.sidebar{padding:18px 13px;background:rgba(13,13,11,.98)}
+.brand-header{gap:11px;padding:4px 6px 20px;border-bottom-color:rgba(232,189,74,.2)}
+.brand-orb{border-radius:10px;background:#d5aa3b;border:1px solid #f1d77c;box-shadow:0 0 20px rgba(213,170,59,.13);color:#11100c}
+.brand-title{background:linear-gradient(90deg,#fffdf6,#e8bd4a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px}
+.brand-subtitle{color:#a99e84;letter-spacing:1.1px}
+.nav-section-label{color:#8e8265;letter-spacing:1.7px;margin-top:24px}
+.nav-list{gap:4px}
+.nav-btn{border-radius:8px;padding:12px 11px;color:#b4ad9d}
+.nav-btn:hover{background:rgba(255,255,255,.035);border-color:rgba(232,189,74,.18)}
+.nav-btn.active{background:linear-gradient(90deg,rgba(224,177,54,.17),rgba(224,177,54,.045));border-color:rgba(232,189,74,.4);color:#fff7dd;box-shadow:inset 3px 0 0 #e8bd4a}
+.nav-badge{background:rgba(232,189,74,.09);color:#f0cc67;border-color:rgba(232,189,74,.23)}
+.sidebar-ai-box{background:#17160f;border-color:rgba(232,189,74,.22);border-radius:10px}
+.status-dot{box-shadow:0 0 7px currentColor}
+.top-hud{padding:12px 16px;flex-wrap:wrap;gap:10px}
+.target-bar-group{min-width:280px}
+.target-input-wrapper{background:#090908;border-color:rgba(232,189,74,.26);border-radius:8px}
+.target-input-wrapper:focus-within{border-color:#e8bd4a;box-shadow:0 0 0 2px rgba(232,189,74,.12)}
+.target-prefix{color:#e8bd4a}.target-input{color:#fff9e9}
+.chip-btn{border-radius:6px}
+.chip-btn:hover{border-color:#e8bd4a;color:#f2ce69;background:rgba(232,189,74,.08)}
+.glass-select{background:#12120f;border-color:rgba(232,189,74,.2);border-radius:7px}
+.glass-select:focus{border-color:#e8bd4a}
+.btn-primary-glow{border-radius:7px;border-color:#e8bd4a;background:#d9ad3f;color:#17140b;box-shadow:none}
+.btn-primary-glow:hover{background:#f0cd66;box-shadow:0 4px 18px rgba(232,189,74,.18)}
+.btn-beast{border-radius:7px;border-color:rgba(239,119,112,.5);background:rgba(106,34,30,.22);color:#f49b91}
+.btn-beast:hover{background:rgba(106,34,30,.4);box-shadow:none}
+.btn-secondary-glass{border-radius:7px;background:#171711;border-color:rgba(232,189,74,.18)}
+.btn-secondary-glass:hover{border-color:rgba(232,189,74,.55);background:rgba(232,189,74,.08)}
+.workspace-main,.view-pane{gap:12px}
+.kpi-grid{gap:10px}
+.kpi-card{padding:17px;min-height:122px}
+.kpi-card::after{background:radial-gradient(circle,rgba(232,189,74,.07),transparent 70%)}
+.kpi-label{color:#a89d83;letter-spacing:1.25px}
+.kpi-value{font-size:1.7rem}.kpi-sub{color:#aaa391}
+.command-split{grid-template-columns:minmax(300px,.78fr) minmax(0,1.42fr);gap:12px}
+.panel-header{padding:14px 16px;border-bottom-color:rgba(232,189,74,.14);gap:10px;flex-wrap:wrap}
+.panel-title{letter-spacing:.25px}
+.sweep-bar{gap:6px;padding:10px 12px;border-bottom-color:rgba(232,189,74,.12)}
+.sweep-btn{border-radius:7px;border-color:rgba(232,189,74,.15);background:#14140f}
+.sweep-btn:hover,.sweep-btn.active{border-color:rgba(232,189,74,.55);background:rgba(232,189,74,.1);color:#f0cf70}
+.output-tabs{display:flex;flex-wrap:wrap;gap:5px}.tab-pill{border-radius:6px}
+input,select,textarea{accent-color:#e8bd4a}
+:focus-visible{outline:2px solid #e8bd4a;outline-offset:2px}
+a{color:#e8bd4a}::selection{background:rgba(232,189,74,.3);color:#fffdf5}
+@media(max-width:1200px){.app-shell{grid-template-columns:210px minmax(0,1fr)}.quick-target-chips{display:none}.hud-controls{flex-wrap:wrap;justify-content:flex-end}.command-split{grid-template-columns:minmax(260px,.72fr) minmax(0,1.28fr)}}
+@media(max-width:900px){html,body{height:auto;min-height:100%;overflow:auto}.app-shell{display:flex;flex-direction:column;width:100%;height:auto;min-height:100vh}.sidebar{order:0;max-height:none}.top-hud{order:1;align-items:stretch}.target-bar-group{max-width:none}.hud-controls{justify-content:flex-start}.workspace-main{order:2;overflow:visible}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.command-split{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.app-shell{padding:8px;gap:8px}.kpi-grid{grid-template-columns:minmax(0,1fr)}.hud-controls>*{max-width:100%}.target-bar-group{min-width:0}.panel-header{align-items:flex-start}.sweep-bar{grid-template-columns:repeat(2,minmax(0,1fr))}}
