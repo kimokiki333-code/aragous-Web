@@ -130,6 +130,25 @@
     return scanRecord;
   }
 
+  function buildClientAnalysis(target, outputs, severities) {
+    return {
+      target,
+      status: "unavailable",
+      risk_score: null,
+      risk_level: "UNASSESSED",
+      analysis_markdown: [
+        "### Analysis unavailable",
+        "ARAGOS did not receive an AI analysis from a configured, reachable provider.",
+        "No risk score, findings, or recommended modules have been inferred from unavailable scan output.",
+        "Connect a supported analysis provider and run analysis again to receive an evidence-based assessment."
+      ].join("\n\n"),
+      model: null,
+      provider: "No AI provider available",
+      latency_ms: null,
+      recommended_modules: []
+    };
+  }
+
   function renderMarkdown(md) {
     if (!md) return "";
     let html = escapeHtml(md);
@@ -391,8 +410,6 @@
           options: opts.options || {},
           auto_ai_analyze: true
         });
-        const scansData = await apiGet("/api/scans");
-        state.scans = scansData.scans || [scanRecord];
       } catch (_) {
         scanRecord = runClientScanJob({
           target,
@@ -401,6 +418,14 @@
           threads: 2,
           profile
         });
+      }
+      if (scanRecord.status !== "unavailable") {
+        try {
+          const scansData = await apiGet("/api/scans");
+          state.scans = scansData.scans || [scanRecord];
+        } catch (_) {
+          state.scans = [scanRecord, ...state.scans.filter((item) => item.scan_id !== scanRecord.scan_id)];
+        }
       }
 
       state.activeScan = scanRecord;
@@ -436,9 +461,9 @@
 
     const ai = scan.ai_analysis || buildClientAnalysis(scan.target, scan.outputs || {}, scan.severities || {});
     scan.ai_analysis = ai;
-    const score = ai.risk_score !== undefined ? ai.risk_score : 26;
-    const level = ai.risk_level || "LOW";
-    document.getElementById("kpi-risk-score").textContent = `${score}/100`;
+    const score = ai.risk_score !== undefined && ai.risk_score !== null ? ai.risk_score : "—";
+    const level = ai.risk_level || "UNASSESSED";
+    document.getElementById("kpi-risk-score").textContent = score === "—" ? "—" : `${score}/100`;
     const riskBadge = document.getElementById("kpi-risk-level");
     riskBadge.textContent = level;
     riskBadge.className = "sev-badge " + (level === "CRITICAL" || level === "HIGH" ? "sev-ALERT" : level === "MODERATE" ? "sev-WARN" : "sev-OK");
@@ -569,7 +594,12 @@
       renderActiveScan(state.activeScan);
       document.querySelector('.tab-pill[data-outtab="ai"]').click();
       setThreeState("idle");
-      showToast("AI Threat Analysis updated", "success");
+      showToast(
+        state.activeScan.ai_analysis && state.activeScan.ai_analysis.status !== "unavailable"
+          ? "AI Threat Analysis updated"
+          : "AI analysis unavailable; no synthetic assessment was shown.",
+        state.activeScan.ai_analysis && state.activeScan.ai_analysis.status !== "unavailable" ? "success" : "error"
+      );
     });
 
     document.getElementById("btn-export-current-md").addEventListener("click", () => {
@@ -862,8 +892,8 @@
         res = {
           reply: clientAi.analysis_markdown,
           model: state.activeModel,
-          provider: "Aragos Neural Core (Serverless/Static Ready)",
-          latency_ms: 14
+          provider: "No AI provider available",
+          latency_ms: null
         };
       }
 
