@@ -249,12 +249,7 @@ def extract_findings_from_output(mod_name: str, text: str, severity: str) -> Lis
                     "severity": "ALERT" if ("critical" in clean_ln.lower() or "alert" in clean_ln.lower() or "vulnerable" in clean_ln.lower()) else ("WARN" if severity in ("WARN", "ALERT") else "INFO"),
                     "detail": clean_ln[:220],
                 })
-    if not findings:
-        findings.append({
-            "module": mod_name,
-            "severity": severity,
-            "detail": f"{mod_name} completed inspection with status {severity}.",
-        })
+    # No matching evidence means no finding; never manufacture a generic success/finding row.
     return findings[:8]
 
 
