@@ -226,6 +226,7 @@ def execute_module_safe(
         message = (
             f"[UNAVAILABLE] Live evidence was not collected by {script_name}.\n"
             "[Evidence status] Findings are not inferred from missing output or network errors.\n"
+            "[Evidence status] No synthetic telemetry was generated.\n"
             f"[Diagnostic] {diagnostic[:1200]}"
         )
         return message, elapsed, True
