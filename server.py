@@ -166,18 +166,9 @@ def execute_module_safe(
     raw_out = ""
     used_fallback = False
 
-    if IS_SERVERLESS:
-        # Serverless deployments must not substitute fabricated telemetry for live module execution.
-        elapsed = round(time.time() - start, 2)
-        message = (
-            f"[UNAVAILABLE] Live module execution is disabled in this serverless environment for {script_name}.\n"
-            "[Evidence status] No target findings were collected; no synthetic telemetry was generated."
-        )
-        return message, elapsed, True
-
     if os.path.isfile(script_path):
-        mod_name = os.path.splitext(script_name)[0]
-        cmd = [sys.executable, "-m", f"argus.modules.{mod_name}", cleaned_target, str(threads)]
+        # Catalog scripts are packaged as root-level files in this repository, not argus.modules.
+        cmd = [sys.executable, script_path, cleaned_target, str(threads)]
         if module_opts:
             cmd.append(json.dumps(module_opts))
         env = os.environ.copy()
