@@ -510,7 +510,7 @@
           <strong style="color:#c4b5fd;">Model:</strong> <code>${escapeHtml(ai.model || state.activeModel)}</code>
           <span style="margin-left:10px;font-size:0.76rem;color:var(--text-secondary);">Provider: ${escapeHtml(ai.provider || "Ollama Hybrid")} (${ai.latency_ms || 15}ms)</span>
         </div>
-        <span class="sev-badge ${level === "HIGH" || level === "CRITICAL" ? "sev-ALERT" : level === "MODERATE" ? "sev-WARN" : "sev-OK"}">Risk: ${score}/100 (${level})</span>
+        <span class="${level === "UNASSESSED" ? "sev-badge" : "sev-badge " + (level === "HIGH" || level === "CRITICAL" ? "sev-ALERT" : level === "MODERATE" ? "sev-WARN" : "sev-OK")}">Risk: ${score}/100 (${level})</span>
       </div>
       ${renderMarkdown(ai.analysis_markdown)}
       ${recHtml}
@@ -1065,7 +1065,7 @@
               </span>
             </div>
             <div style="font-size:0.76rem;color:var(--text-secondary);margin-top:4px;">
-              Mode: ${escapeHtml((s.mode || "single").toUpperCase())} · Modules (${s.module_count}): ${escapeHtml(modNames.join(", "))} · Duration: ${s.duration_s}s
+              Status: ${escapeHtml((s.status || "unknown").toUpperCase())} · Mode: ${escapeHtml((s.mode || "single").toUpperCase())} · Modules (${s.module_count}): ${escapeHtml(modNames.join(", "))} · Duration: ${s.duration_s}s
             </div>
           </div>
 
